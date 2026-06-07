@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watsons KAM Dashboard — Jan–Jun W22 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #f8f9fc; --bg2: #ffffff; --bg3: #f1f4f9; --bg4: #e2e8f0;
+    --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14);
+    --text: #1e293b; --text2: #64748b; --text3: #94a3b8;
+    --blue: #3b82f6; --blue2: #1d4ed8; --green: #22c55e; --red: #ef4444;
+    --amber: #f59e0b; --purple: #a78bfa; --teal: #2dd4bf; --pink: #f472b6;
+    --r: 10px; --r2: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, 'Inter', sans-serif; font-size: 14px; min-height: 100vh; }
+  
+  /* Layout */
+  .sidebar { position: fixed; left: 0; top: 0; width: 220px; height: 100vh; background: #f1f5f9; border-right: 1px solid var(--border); padding: 0; overflow-y: auto; z-index: 100; }
+  .main { margin-left: 220px; padding: 24px 28px; min-height: 100vh; }
+  
+  /* Sidebar */
+  .logo { padding: 20px 18px 14px; border-bottom: 1px solid var(--border); }
+  .logo-title { font-size: 13px; font-weight: 700; letter-spacing: .08em; color: var(--blue); text-transform: uppercase; }
+  .logo-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .nav-section { padding: 14px 12px 6px; font-size: 10px; letter-spacing: .1em; color: var(--text3); text-transform: uppercase; font-weight: 600; }
+  .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 16px; background: none; border: none; color: var(--text2); font-size: 13px; cursor: pointer; border-radius: 0; text-align: left; transition: all .15s; }
+  .nav-btn:hover { background: var(--bg3); color: var(--text); }
+  .nav-btn.active { background: rgba(37,99,235,0.1); color: #2563eb; border-right: 2px solid #2563eb; }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  
+  /* Filters */
+  .filter-bar { background: #ffffff; border: 1px solid var(--border); border-radius: var(--r); padding: 14px 18px; margin-bottom: 20px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .filter-group { display: flex; flex-direction: column; gap: 4px; }
+  .filter-label { font-size: 10px; letter-spacing: .08em; color: var(--text3); text-transform: uppercase; font-weight: 600; }
+  select { background: #ffffff; border: 1px solid var(--border2); border-radius: var(--r2); padding: 6px 28px 6px 10px; color: var(--text); font-size: 13px; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b99b3' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; min-width: 130px; }
+  select:focus { outline: none; border-color: var(--blue); }
+
+  /* KPI cards */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .kpi { background: #ffffff; border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; position: relative; overflow: hidden; }
+  .kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .kpi.blue::before { background: var(--blue); }
+  .kpi.green::before { background: var(--green); }
+  .kpi.amber::before { background: var(--amber); }
+  .kpi.purple::before { background: var(--purple); }
+  .kpi-label { font-size: 10px; letter-spacing: .1em; color: var(--text3); text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+  .kpi-val { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1; margin-bottom: 6px; }
+  .kpi-sub { font-size: 12px; color: var(--text2); }
+  .up { color: var(--green); } .down { color: var(--red); } .neu { color: var(--text2); }
+
+  /* Charts */
+  .charts-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .charts-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .chart-card { background: #ffffff; border: 1px solid var(--border); border-radius: var(--r); padding: 18px; }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--text2); letter-spacing: .04em; margin-bottom: 14px; text-transform: uppercase; }
+  .chart-wrap { position: relative; }
+
+  /* Tabs */
+  .tab-row { display: flex; gap: 4px; margin-bottom: 16px; background: #e2e8f0; padding: 4px; border-radius: var(--r2); width: fit-content; }
+  .tab { padding: 7px 16px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: none; color: var(--text2); transition: all .15s; letter-spacing: .03em; }
+  .tab.on { background: #ffffff; color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+
+  /* Tables */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th { font-size: 10px; letter-spacing: .08em; color: var(--text3); text-transform: uppercase; font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #f1f5f9; }
+
+  /* Bar inline */
+  .inline-bar { display: flex; align-items: center; gap: 8px; }
+  .bar-bg { flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; max-width: 120px; }
+  .bar-fill { height: 100%; border-radius: 3px; background: var(--blue); }
+
+  /* Badge */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .badge-up { background: rgba(34,197,94,.15); color: var(--green); }
+  .badge-dn { background: rgba(239,68,68,.15); color: var(--red); }
+  .badge-neu { background: var(--bg3); color: var(--text2); }
+  .badge-new { background: rgba(167,139,250,.15); color: var(--purple); }
+
+  /* Brand pills */
+  .brand-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .pill { padding: 5px 13px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; transition: all .15s; }
+
+  /* State bars */
+  .state-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .state-row:last-child { border-bottom: none; }
+  .state-name { width: 110px; font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .state-bar-bg { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+  .state-bar-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+  .state-val { width: 80px; text-align: right; font-size: 12px; color: var(--text2); }
+  .state-stores { width: 50px; text-align: right; font-size: 11px; color: var(--text3); }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+  .leg-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* Page sections */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Header */
+  .page-header { margin-bottom: 20px; }
+  .page-header h1 { font-size: 20px; font-weight: 700; color: var(--text); }
+  .page-header p { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+  /* Insight cards */
+  .insight-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 16px; }
+  .ins { background: #ffffff; border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; border-left: 3px solid; }
+  .ins-label { font-size: 10px; letter-spacing: .08em; color: var(--text3); text-transform: uppercase; margin-bottom: 5px; }
+  .ins-val { font-size: 16px; font-weight: 700; color: var(--text); }
+  .ins-sub { font-size: 11px; margin-top: 3px; }
+
+  /* SKU grid */
+  .sku-grid { display: flex; flex-direction: column; gap: 0; }
+  .sku-row { display: flex; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); gap: 10px; }
+  .sku-row:last-child { border-bottom: none; }
+  .sku-rank { width: 20px; font-size: 11px; color: var(--text3); font-weight: 700; }
+  .sku-name { flex: 1; font-size: 12px; color: var(--text); line-height: 1.3; }
+  .sku-right { text-align: right; }
+  .sku-val { font-size: 13px; font-weight: 600; color: var(--text); }
+  .sku-qty { font-size: 11px; color: var(--text3); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 60px; } .sidebar .nav-btn span:not(.nav-icon) { display: none; } .sidebar .logo-title, .sidebar .logo-sub, .sidebar .nav-section { display: none; }
+    .main { margin-left: 60px; padding: 16px; }
+    .kpi-row { grid-template-columns: repeat(2,1fr); }
+    .charts-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="logo">
+    <div class="logo-title">Watsons KAM</div>
+    <div class="logo-sub">Jan – May 2026</div>
+  </div>
+  <div class="nav-section">Overview</div>
+  <button class="nav-btn active" onclick="showPage('overview',this)"><span class="nav-icon">📊</span><span>Dashboard</span></button>
+  <button class="nav-btn" onclick="showPage('trend',this)"><span class="nav-icon">📈</span><span>Trend</span></button>
+  <div class="nav-section">By Brand</div>
+  <button class="nav-btn" onclick="showPage('brand',this)"><span class="nav-icon">🏷️</span><span>Brand Deep Dive</span></button>
+  <button class="nav-btn" onclick="showPage('sku',this)"><span class="nav-icon">📦</span><span>SKU Performance</span></button>
+  <div class="nav-section">Distribution</div>
+  <button class="nav-btn" onclick="showPage('region',this)"><span class="nav-icon">🗺️</span><span>Regional</span></button>
+  <button class="nav-btn" onclick="showPage('stores',this)"><span class="nav-icon">🏪</span><span>Top Stores</span></button>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ═══════════ OVERVIEW ═══════════ -->
+<div id="page-overview" class="page active">
+  <div class="page-header">
+    <h1>Sales Overview</h1>
+    <p>Jan–Jun W22 2026 · 11 brands · 872 stores · 260,290 records</p>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi blue"><div class="kpi-label">YTD Sales TY</div><div class="kpi-val">RM 14.22M</div><div class="kpi-sub up">▲ +9.5% vs LY (RM 12.98M)</div></div>
+    <div class="kpi green"><div class="kpi-label">YTD Qty Sold</div><div class="kpi-val">374,845</div><div class="kpi-sub up">▲ +33.0% vs LY</div></div>
+    <div class="kpi amber"><div class="kpi-label">Best Month</div><div class="kpi-val">March</div><div class="kpi-sub neu">RM 3.51M · peak month</div></div>
+    <div class="kpi purple"><div class="kpi-label">Star Brand</div><div class="kpi-val">BIODANCE</div><div class="kpi-sub up">▲ +309% vs LY</div></div>
+  </div>
+  <div class="insight-row">
+    <div class="ins" style="border-color:var(--green)"><div class="ins-label">Fastest Growth</div><div class="ins-val">BIODANCE +309%</div><div class="ins-sub up">RM 1.99M YTD — accelerating every month</div></div>
+    <div class="ins" style="border-color:var(--blue)"><div class="ins-label">Revenue Anchor</div><div class="ins-val">BOJ 49% share</div><div class="ins-sub up">RM 6.99M YTD, +11% steady growth</div></div>
+    <div class="ins" style="border-color:var(--amber)"><div class="ins-label">ABIB momentum</div><div class="ins-val">+86.7% YTD</div><div class="ins-sub up">Growing consistently all 5 months</div></div>
+    <div class="ins" style="border-color:var(--red)"><div class="ins-label">ANUA declining</div><div class="ins-val">–24.7% YTD</div><div class="ins-sub down">Dropped every month — needs buyer discussion</div></div>
+    <div class="ins" style="border-color:var(--red)"><div class="ins-label">NBZ critical</div><div class="ins-val">–38.8% YTD</div><div class="ins-sub down">RM 998K — consider strategy review</div></div>
+    <div class="ins" style="border-color:var(--text3)"><div class="ins-label">BELIF / CNP</div><div class="ins-val">Near zero</div><div class="ins-sub neu">Both dropped off — delist risk</div></div>
+  </div>
+  <div class="charts-2">
+    <div class="chart-card">
+      <div class="card-title">Monthly Sales — TY vs LY</div>
+      <div class="legend"><span class="leg-item"><span class="leg-dot" style="background:var(--blue)"></span>TY 2026</span><span class="leg-item"><span class="leg-dot" style="background:var(--bg4);border:1px dashed var(--blue)"></span>LY 2025</span></div>
+      <div class="chart-wrap" style="height:220px"><canvas id="ov-monthly"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">Brand YTD Growth Rate (%)</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="ov-growth"></canvas></div>
+    </div>
+  </div>
+  <div class="charts-2">
+    <div class="chart-card">
+      <div class="card-title">Brand Share of Sales — TY YTD</div>
+      <div class="legend" id="ov-share-leg"></div>
+      <div class="chart-wrap" style="height:200px"><canvas id="ov-share"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">Category Sales YTD (RM)</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="ov-cat"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ TREND ═══════════ -->
+<div id="page-trend" class="page">
+  <div class="page-header"><h1>Sales Trend</h1><p>Monthly & weekly breakdown — toggle brands to compare</p></div>
+  <div class="filter-bar">
+    <div class="filter-group"><div class="filter-label">Month</div>
+      <select id="trend-month" onchange="renderTrend()"><option value="all">All Months</option><option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option><option>May</option></select>
+    </div>
+  </div>
+  <div class="chart-card" style="margin-bottom:16px">
+    <div class="card-title">Monthly Sales by Brand</div>
+    <div class="brand-pills" id="trend-pills"></div>
+    <div class="legend" id="trend-leg"></div>
+    <div class="chart-wrap" style="height:280px"><canvas id="trend-chart"></canvas></div>
+  </div>
+  <div class="charts-2">
+    <div class="chart-card">
+      <div class="card-title">Weekly Trend — <span id="trend-wk-title">select brand</span></div>
+      <div class="filter-group" style="margin-bottom:12px"><div class="filter-label">Brand</div>
+        <select id="trend-wk-brand" onchange="renderWeekly()"><option>BOJ</option><option>ANUA</option><option>BIODANCE</option><option>ABIB</option><option>NBZ</option><option>TIRTIR</option><option>FWEE</option><option>ISNTREE</option><option>ATP</option></select>
+      </div>
+      <div class="chart-wrap" style="height:220px"><canvas id="trend-weekly"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">TY vs LY — Monthly Comparison</div>
+      <div class="filter-group" style="margin-bottom:12px"><div class="filter-label">Brand</div>
+        <select id="trend-cmp-brand" onchange="renderCmp()"><option>BOJ</option><option>ANUA</option><option>BIODANCE</option><option>ABIB</option><option>NBZ</option><option>TIRTIR</option><option>FWEE</option><option>ISNTREE</option><option>ATP</option></select>
+      </div>
+      <div class="chart-wrap" style="height:220px"><canvas id="trend-cmp"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ BRAND DEEP DIVE ═══════════ -->
+<div id="page-brand" class="page">
+  <div class="page-header"><h1>Brand Deep Dive</h1><p>Select a brand to explore performance in detail</p></div>
+  <div class="filter-bar">
+    <div class="filter-group"><div class="filter-label">Brand</div>
+      <select id="brand-sel" onchange="renderBrand()">
+        <option>BOJ</option><option>ANUA</option><option>BIODANCE</option><option>ABIB</option><option>NBZ</option><option>TIRTIR</option><option>FWEE</option><option>ISNTREE</option><option>ATP</option><option>BELIF</option>
+      </select>
+    </div>
+    <div class="filter-group"><div class="filter-label">Month</div>
+      <select id="brand-month" onchange="renderBrand()"><option value="all">All Months</option><option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option><option>May</option></select>
+    </div>
+  </div>
+  <div class="kpi-row" id="brand-kpis"></div>
+  <div class="charts-2">
+    <div class="chart-card">
+      <div class="card-title">Monthly Sales — TY vs LY</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="brand-monthly"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">Regional Distribution</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="brand-region-chart"></canvas></div>
+    </div>
+  </div>
+  <div class="charts-2">
+    <div class="chart-card">
+      <div class="card-title">Weekly Sales Trend</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="brand-weekly"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">Top SKUs</div>
+      <div class="sku-grid" id="brand-skus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SKU PERFORMANCE ═══════════ -->
+<div id="page-sku" class="page">
+  <div class="page-header"><h1>SKU Performance</h1><p>Product-level breakdown by brand</p></div>
+  <div class="filter-bar">
+    <div class="filter-group"><div class="filter-label">Brand</div>
+      <select id="sku-brand" onchange="renderSKU()"><option value="all">All Brands</option><option>BOJ</option><option>ANUA</option><option>BIODANCE</option><option>ABIB</option><option>NBZ</option><option>TIRTIR</option><option>FWEE</option><option>ISNTREE</option><option>ATP</option></select>
+    </div>
+    <div class="filter-group"><div class="filter-label">Sort By</div>
+      <select id="sku-sort" onchange="renderSKU()"><option value="ty">Sales TY</option><option value="growth">Growth %</option><option value="qty">Qty Sold</option></select>
+    </div>
+  </div>
+  <div class="charts-2" style="margin-bottom:16px">
+    <div class="chart-card">
+      <div class="card-title">SKU Sales Comparison — TY vs LY</div>
+      <div class="chart-wrap" style="height:300px"><canvas id="sku-bar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">SKU Details</div>
+      <div style="overflow-y:auto;max-height:320px">
+        <table class="data-table">
+          <thead><tr><th>#</th><th>SKU</th><th>Brand</th><th>TY Sales</th><th>LY Sales</th><th>Growth</th><th>Qty TY</th></tr></thead>
+          <tbody id="sku-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ REGIONAL ═══════════ -->
+<div id="page-region" class="page">
+  <div class="page-header"><h1>Regional Distribution</h1><p>Sales by state/region across all brands</p></div>
+  <div class="filter-bar">
+    <div class="filter-group"><div class="filter-label">Brand</div>
+      <select id="reg-brand" onchange="renderRegion()"><option value="all">All Brands</option><option>BOJ</option><option>ANUA</option><option>BIODANCE</option><option>ABIB</option><option>NBZ</option><option>TIRTIR</option><option>FWEE</option><option>ISNTREE</option><option>ATP</option></select>
+    </div>
+    <div class="filter-group"><div class="filter-label">Metric</div>
+      <select id="reg-metric" onchange="renderRegion()"><option value="ty">Sales TY</option><option value="growth">Growth %</option><option value="stores">Store Count</option></select>
+    </div>
+  </div>
+  <div class="charts-2">
+    <div class="chart-card">
+      <div class="card-title">Sales by State — TY</div>
+      <div id="reg-bars" style="margin-top:4px"></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">Regional Share</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="reg-pie"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="card-title">Brand Performance by State</div>
+    <div style="overflow-x:auto">
+      <table class="data-table" id="reg-table">
+        <thead><tr><th>State</th><th>TY Sales</th><th>LY Sales</th><th>Growth</th><th>Stores</th><th>Qty TY</th></tr></thead>
+        <tbody id="reg-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ TOP STORES ═══════════ -->
+<div id="page-stores" class="page">
+  <div class="page-header"><h1>Top Stores</h1><p>Best performing stores by brand</p></div>
+  <div class="filter-bar">
+    <div class="filter-group"><div class="filter-label">Brand</div>
+      <select id="store-brand" onchange="renderStores()"><option>BOJ</option><option>ANUA</option><option>BIODANCE</option><option>ABIB</option><option>NBZ</option><option>TIRTIR</option><option>FWEE</option><option>ISNTREE</option><option>ATP</option></select>
+    </div>
+    <div class="filter-group"><div class="filter-label">State Filter</div>
+      <select id="store-state" onchange="renderStores()">
+        <option value="all">All States</option>
+        <option>KL</option><option>Selangor</option><option>Johor</option><option>Penang</option><option>Sarawak</option><option>Perak</option><option>Putrajaya</option><option>Sabah</option><option>Melaka</option><option>Kedah</option><option>Pahang</option><option>Online</option><option>KL/Others</option>
+      </select>
+    </div>
+  </div>
+  <div class="charts-2">
+    <div class="chart-card">
+      <div class="card-title">Top 12 Stores — Sales Chart</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="store-chart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">Store Ranking</div>
+      <div style="overflow-y:auto;max-height:340px">
+        <table class="data-table">
+          <thead><tr><th>#</th><th>Store</th><th>State</th><th>TY Sales</th><th>Qty</th></tr></thead>
+          <tbody id="store-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────
+const DATA = {"bm":{"ABIB":{"Jan":[150753,72816,10645],"Feb":[188182,96106,13969],"Mar":[240837,113787,18283],"Apr":[185502,121135,12681],"May":[171149,97649,10499],"Jun":[50155,22212,2934]},"ANUA":{"Jan":[489393,701873,10580],"Feb":[542457,721922,11405],"Mar":[674596,879127,14124],"Apr":[471151,642259,9802],"May":[459787,557219,9829],"Jun":[130616,152779,2685]},"ATP":{"Jan":[10169,10129,161],"Feb":[15010,16055,286],"Mar":[14434,12197,273],"Apr":[4498,13344,71],"May":[990,17106,10],"Jun":[306,2923,5]},"BELIF":{"Jan":[0,6160,0],"Feb":[0,6530,0],"Mar":[432,7158,30],"Apr":[0,6645,0],"May":[0,9088,0],"Jun":[0,1911,0]},"BIODANCE":{"Jan":[337942,39870,15518],"Feb":[346858,54801,16505],"Mar":[461053,109428,21955],"Apr":[408002,117693,19841],"May":[436798,164682,22673],"Jun":[149321,50976,7712]},"BOJ":{"Jan":[1272130,1111093,23300],"Feb":[1490764,1205397,28414],"Mar":[1712033,1493972,31136],"Apr":[1226931,1234444,21639],"May":[1291512,1253053,22602],"Jun":[471617,296995,8313]},"CNP":{"Jan":[0,11604,0],"Feb":[0,9257,0],"Mar":[0,11657,0],"Apr":[0,8824,0],"May":[0,7856,0],"Jun":[0,1211,0]},"FWEE":{"Jan":[23365,0,343],"Feb":[38707,0,704],"Mar":[42373,0,775],"Apr":[22128,31472,350],"May":[19465,56383,326],"Jun":[7414,16427,129]},"ISNTREE":{"Jan":[28700,33549,416],"Feb":[31428,33179,502],"Mar":[36630,46814,575],"Apr":[24979,38048,377],"May":[20430,35852,308],"Jun":[7379,8492,105]},"NBZ":{"Jan":[211653,343113,4108],"Feb":[212854,297696,4851],"Mar":[241466,429229,4580],"Apr":[177827,296128,3622],"May":[154044,263455,2994],"Jun":[47787,58293,990]},"TIRTIR":{"Jan":[63939,56219,692],"Feb":[68800,64297,773],"Mar":[82394,100831,975],"Apr":[55296,79858,590],"May":[57133,62591,638],"Jun":[16794,16359,178]}},"bs":{"ABIB":{"Johor":[44549,13873,3898,44],"KL":[147005,111138,8161,21],"KL/Others":[427063,179754,33393,561],"Kedah":[6402,817,595,12],"Kelantan":[1069,350,97,5],"Melaka":[9750,5997,859,17],"Negeri Sembilan":[3547,4283,318,11],"Online":[30386,12809,1546,4],"Pahang":[24669,30206,1227,17],"Penang":[27206,23433,1702,14],"Perak":[12031,4417,1141,19],"Putrajaya":[16981,9869,886,4],"Sabah":[3919,776,365,15],"Sarawak":[27786,15523,1701,23],"Selangor":[203384,110459,13042,95],"Terengganu":[829,0,80,3]},"ANUA":{"Johor":[106087,153971,2215,45],"KL":[314274,443000,6026,21],"KL/Others":[1404244,1870372,30488,571],"Kedah":[22708,24523,504,12],"Kelantan":[5274,11043,138,5],"Melaka":[35318,52572,765,17],"Negeri Sembilan":[18476,28513,400,11],"Online":[69816,45962,1409,4],"Pahang":[40329,54460,903,17],"Penang":[59805,85378,1278,14],"Perak":[36762,49963,802,19],"Putrajaya":[47486,65041,967,4],"Sabah":[35298,39458,802,15],"Sarawak":[136456,193315,2852,23],"Selangor":[429681,528325,8727,97],"Terengganu":[5984,9280,149,3]},"ATP":{"Johor":[1585,7166,27,10],"KL":[6654,14564,119,12],"KL/Others":[11469,22114,200,90],"Online":[15597,9221,286,4],"Pahang":[309,111,4,1],"Penang":[1558,3920,28,5],"Perak":[161,870,3,4],"Putrajaya":[375,903,6,3],"Sarawak":[2446,1826,41,6],"Selangor":[5251,10280,92,32]},"BELIF":{"KL/Others":[146,11347,10,34],"Selangor":[286,5890,20,16]},"BIODANCE":{"Johor":[102042,11717,4975,24],"KL":[280056,158567,13531,17],"KL/Others":[1016775,166104,49551,350],"Kedah":[6964,1070,339,4],"Kelantan":[3671,0,175,2],"Melaka":[19399,6049,944,7],"Negeri Sembilan":[13056,2609,634,9],"Online":[22658,14010,1248,4],"Pahang":[28175,11052,1370,9],"Penang":[53629,24671,2601,9],"Perak":[26218,1203,1266,7],"Putrajaya":[36654,18210,1763,3],"Sabah":[11337,0,544,8],"Sarawak":[76193,7900,3726,18],"Selangor":[435810,114287,21185,70],"Terengganu":[7337,0,352,3]},"BOJ":{"Johor":[282415,268403,5087,45],"KL":[1035861,1005130,18571,21],"KL/Others":[3466957,3138697,62830,573],"Kedah":[75391,38149,1376,12],"Kelantan":[11163,11736,203,5],"Melaka":[84637,79841,1539,17],"Negeri Sembilan":[48333,53647,875,11],"Online":[374836,138536,7218,4],"Pahang":[100539,84211,1825,17],"Penang":[163535,148984,2951,14],"Perak":[93103,79313,1688,19],"Putrajaya":[152768,151060,2772,4],"Sabah":[65618,51880,1199,15],"Sarawak":[258049,248603,4728,23],"Selangor":[1239809,1082462,22323,97],"Terengganu":[11974,14300,219,3]},"CNP":{},"FWEE":{"Johor":[3776,9915,68,6],"KL":[28076,19671,465,9],"KL/Others":[44725,30653,762,23],"Negeri Sembilan":[508,0,9,1],"Online":[5260,780,102,4],"Pahang":[10640,0,179,2],"Penang":[12405,11473,222,4],"Sarawak":[2868,8679,45,4],"Selangor":[45194,12516,775,13]},"ISNTREE":{"Johor":[2233,3530,34,3],"KL":[34368,57580,523,9],"KL/Others":[45274,57366,684,69],"Kedah":[133,598,2,1],"Melaka":[501,1910,8,2],"Negeri Sembilan":[554,618,8,2],"Online":[12569,5583,199,3],"Pahang":[3159,6732,48,4],"Penang":[4723,10368,71,4],"Putrajaya":[5356,9956,84,3],"Sarawak":[5284,3044,82,4],"Selangor":[35392,38648,540,25]},"NBZ":{"Johor":[32288,65424,592,22],"KL":[172178,214424,4014,16],"KL/Others":[427025,826419,7971,316],"Kedah":[3186,11014,44,7],"Kelantan":[714,1265,10,1],"Melaka":[8810,22632,147,11],"Negeri Sembilan":[6956,13285,132,6],"Online":[35499,38506,633,4],"Pahang":[19156,40478,271,14],"Penang":[33603,36321,771,8],"Perak":[6057,18745,131,9],"Putrajaya":[32485,46432,660,3],"Sabah":[8785,13253,120,6],"Sarawak":[51422,84871,1176,12],"Selangor":[205400,249625,4445,59],"Terengganu":[2064,5221,28,2]},"TIRTIR":{"Johor":[21992,21706,240,4],"KL":[134690,135854,1480,8],"KL/Others":[43225,61184,480,20],"Negeri Sembilan":[383,0,4,1],"Online":[11963,15625,152,4],"Pahang":[21345,32678,247,2],"Penang":[19987,32154,219,3],"Putrajaya":[11295,27034,121,2],"Selangor":[79477,31210,903,12]}},"bsku":{"ABIB":[["ABIB M.ACID MSK - HEARTLEAF 1S",124396,53027,12162],["ABIB PDRN EYE PATCH JELLY 60S",101921,0,1478],["ABIB M.ACID MSK - AQUA FIT 1S",95496,56704,9234],["ABIB M.ACID MSK - JER ROSE 1S",95197,51778,9201],["ABIB GUMMY MSK - HEARTLEAF 1S",90266,44191,8662],["ABIB JER ROSE COL EYE PATCH 1S",75889,54648,1099],["ABIB GUMMY MSK - MADECASSO 1S",74176,41118,7232],["ABIB GUMMY MSK - COLL MILK 1S",73373,44431,7089]],"ANUA":[["ANUA NIAC 10 + TXA 3 SRM 30ML",529139,0,6544],["ANUA HEARTLEAF CLN FOAM 150ML",524371,808902,11529],["ANUA HEARTLEAF CLN OIL 200ML",470050,798211,8010],["ANUA HEARTLEAF 77% TONER 250ML",423375,569074,6165],["ANUA HEARTLEAF 77 TONER 40ML",207529,326618,11587],["ANUA PEACH 77 NIACIN TNR 250ML",174095,158659,2600],["ANUA PEACH 70 NIA SERUM 30ML",161461,322545,2091],["ANUA HEARTLEAF 77% TNR PAD 70S",136335,265247,1745]],"ATP":[["ATP MLE CREAM 100ML",28403,26708,469],["ATP TOP TO TOE WASH 300ML",6137,10643,135],["ATP MLE CREAM 65ML ",5987,13118,122],["ATP MLE LOTION 200ML",4880,21284,80]],"BELIF":[["BELIF AQUA BOMB CREAM 30ML",144,14804,10],["BELIF NUMERO 10 ESSENCE 50ML",135,7390,9],["BELIF AQUA BOMB CLN 160ML",81,4005,6],["BELIF MOIST BOMB CREAM 30ML",72,11294,5]],"BIODANCE":[["BIODANCE BIO COLLAGEN MASK 1S",830344,302085,40239],["BIODANCE HYDRO CERA MASK 1S",550837,196739,26859],["BIODANCE RDT VITA NIA MSK 1S",304745,20213,14908],["BIODANCE SEA KELP MSK 1S",275102,18413,13412],["BIODANCE CAVIAR PDRN MASK 1S",178945,0,8786]],"BOJ":[["BOJ RELF RICE+PROBIO SUN 50ML",2096000,1807391,40931],["BOJ RELF AQUA FRESH SUN 50ML",1358454,722065,21286],["BOJ GINSENG RTNL EYE SRM 30ML",687212,662419,12893],["BOJ DYNASTY CRM 50ML",486737,445698,7136],["BOJ GLOW REPLN RICE MILK 150ML",334945,322341,5292],["BOJ RADIANCE CLN BALM 100ML",317318,360179,5858],["BOJ GINSENG ESS WTR 150ML",293142,313920,5703],["BOJ GLOW RICE+ARBUTIN SRM 30ML",283793,290345,5812]],"CNP":[["CNP ANTI-PORE BLACKHEAD KIT 1S",0,7557,0],["CNP PROPOLIS ENERGY AMP 15ML",0,19534,0],["CNP PROPOLIS TRT AMP ESS 150ML",0,23318,0]],"FWEE":[["FWEE SILICONE LIP BRUSH",10470,11979,272],["FWEE CUSHION 01 FAIR GLASS",7586,412,126],["FWEE PUDDING POT RS02 LYRICS",7434,9125,113],["FWEE PUDDING POT BS02 INTO",6381,6166,95],["FWEE PUDDING POT RS04 MEMORIES",6352,8585,94],["FWEE CUSHION 03 NATURAL GLASS",5924,411,92],["FWEE CUSHION 1.5 PEACH GLASS",5762,312,93],["FWEE PUDDING POT BS05 WAVY",5691,4729,83]],"ISNTREE":[["ISNTREE HA WATERY SUN GEL 50ML",80076,91144,1296],["ISNTREE UL MOLECULAR TNR 300ML",27080,32070,396],["ISNTREE UL MOLECULAR SRM 50ML",21765,33489,307],["ISNTREE UL MOLECULAR PAD 60S",11053,21668,156],["ISNTREE X JAEMIN SPC BOX 1S",7629,0,97],["ISNTREE HYA SUN SRM 50ML",1598,0,25],["ISNTREE HA AIRY SUNSTICK 22G",344,17562,6]],"NBZ":[["NBZ NO.5+ VIT NIA PAD 70S",227358,605928,2978],["NBZ NO.5+ VIT CON SRM 30ML",159230,265524,2134],["NBZ N1 EASY CLNS OIL 200ML",75158,117389,993],["NBZ NO9. NAD+ BIO ESS 50ML",73510,0,677],["NBZ N3 RAD GLW JMB ESS PAD 70S",63829,159035,900],["NBZ NO.5+ VIT ESS TNR 200ML",59069,76142,823],["NBZ N3 SUP GLOW ESS TNR 200ML",58843,91582,988],["NBZ N3 PORCL BASE TONE UP 50ML",57357,154510,821]],"TIRTIR":[["TIRTIR RED CUSHION 21N",30398,66391,339],["TIRTIR RED CUSHION 23N",26544,52492,294],["TIRTIR AURA CUSHION 21N",24799,0,250],["TIRTIR RED CUSHION 17C",22477,30762,250],["TIRTIR ALL COVER CUSHION 21N",21176,0,217],["TIRTIR RED CUSHION 21W",20831,36074,232],["TIRTIR RED CUSHION 29N",17648,30950,195],["TIRTIR RED CUSHION 33N",17326,10016,191]]},"bstore":{"ABIB":[["SUNWAY PYRAMID PINK","Selangor",36699,2375],["PAVILION KL SHOPPING","KL",31167,1457],["MID VALLEY SOUTHKEY","KL",30422,1629],["ONE UTAMA SHPG CTR","Selangor",25595,1171],["SURIA KLCC","KL",20275,772],["MID VALLEY MEGAMALL","KL",19615,803],["HOMESDD","Online",18279,1076],["PAVILION BUKIT JALIL","KL",17439,1234],["SUNWAY PYRAMID","Selangor",16916,689],["CONCOURSE M299-MVM","KL/Others",13117,1015],["SKY AVENUE PINK","Pahang",12675,331],["SUNWAY 163 MALL","Selangor",10795,517]],"ANUA":[["PAVILION KL SHOPPING","KL",58525,1096],["SURIA KLCC","KL",45528,819],["MID VALLEY SOUTHKEY","KL",42736,805],["SUNWAY PYRAMID","Selangor",42410,800],["ONE UTAMA SHPG CTR","Selangor",36850,714],["HOMESDD","Online",34152,627],["MID VALLEY MEGAMALL","KL",33510,633],["THE EXCHANGE TRX","KL",29491,569],["IMPERIAL CITY MALL","KL/Others",27916,549],["SUNWAY PYRAMID PINK","Selangor",27732,540],["IOI CITY MALL","Putrajaya",27530,565],["BINTANG MIRI SARAWAK","Sarawak",25191,488]],"ATP":[["SHOPEE","Online",10042,180],["HOMESDD","Online",3479,70],["MID VALLEY SOUTHKEY","KL",1775,32],["LAZADA","Online",1703,29],["PAVILION KL SHOPPING","KL",1369,25],["IMPERIAL CITY MALL","KL/Others",1351,21],["CLICK&COLLECT EXPRES","KL/Others",1278,24],["THE SPRING KUCHING","Sarawak",1142,19],["MID VALLEY MEGAMALL","KL",1107,19],["CITY SQUARE","KL/Others",1094,22],["THE EXCHANGE TRX","KL",1075,19],["SUNWAY PYRAMID","Selangor",1052,19]],"BELIF":[["CENTRAL I-CITY","Selangor",286,20],["AEON KINTA CITY","KL/Others",146,10],["AEON CHERAS SELATAN","KL/Others",0,0],["AEON MELAKA","Melaka",0,0],["AEON KUCHING CENTRAL","Sarawak",0,0],["AEON SHAH ALAM","Selangor",0,0],["AEON TAMAN MALURI","Selangor",0,0],["AEON TEBRAU CITY","KL/Others",0,0],["AEON NILAI","KL/Others",0,0],["AMPANG POINT SHOPPIN","Selangor",0,0],["ANGGUN CITY RAWANG","Selangor",0,0],["BUKIT GAMBIR","KL/Others",0,0]],"BIODANCE":[["PAVILION KL SHOPPING","KL",76316,3656],["SUNWAY PYRAMID PINK","Selangor",48882,2390],["SURIA KLCC","KL",43523,2083],["MID VALLEY SOUTHKEY","KL",35113,1707],["ONE UTAMA SHPG CTR","Selangor",29088,1430],["SUNWAY PYRAMID","Selangor",28809,1394],["MID VALLEY MEGAMALL","KL",28230,1377],["PAVILION BUKIT JALIL","KL",22753,1110],["CONCOURSE M299-MVM","KL/Others",19712,1163],["SUNWAY VELOCITY MALL","Selangor",19498,941],["GURNEY PLAZA","Penang",19308,944],["IOI CITY MALL","Putrajaya",19193,923]],"BOJ":[["SURIA KLCC","KL",172739,3087],["PAVILION KL SHOPPING","KL",160982,2902],["SUNWAY PYRAMID","Selangor",118427,2103],["ONE UTAMA SHPG CTR","Selangor",111421,2020],["MID VALLEY MEGAMALL","KL",110740,1997],["HOMESDD","Online",110470,2013],["MID VALLEY SOUTHKEY","KL",105516,1881],["SHOPEE","Online",100876,2013],["IOI CITY MALL","Putrajaya",97380,1761],["THE EXCHANGE TRX","KL",93281,1661],["TIKTOK SHOP","Online",87366,1706],["LAZADA","Online",76124,1486]],"CNP":[["3 DAMANSARA","Selangor",0,0],["AEON BDR DATO ONN","KL/Others",0,0],["AEON BUKIT INDAH SHO","Johor",0,0],["AEON BUKIT TINGGI SH","KL/Others",0,0],["AEON IPOH STATION 18","Perak",0,0],["AEON NILAI","KL/Others",0,0],["AEON TEBRAU CITY","KL/Others",0,0],["AMPANG POINT SHOPPIN","Selangor",0,0],["AUTO CITY","KL/Others",0,0],["BANDAR PRIMA SANDAKA","KL/Others",0,0],["BEAUFORT 2","Sabah",0,0],["BINTANG MIRI SARAWAK","Sarawak",0,0]],"FWEE":[["SUNWAY PYRAMID PINK","Selangor",21551,357],["PAVILION KL SHOPPING","KL",12872,211],["NU SENTRAL PINK","KL",11849,200],["IMAGO T.SQUARE KK(R)","KL/Others",10923,188],["SKY AVENUE PINK","Pahang",9839,166],["ONE UTAMA SHPG CTR","Selangor",8591,152],["SURIA SABAH","KL/Others",8167,145],["GURNEY PLAZA","Penang",7442,138],["CENTRAL I-CITY PINK","Selangor",6959,125],["IMPERIAL CITY MALL","KL/Others",6376,106],["ELMINA LAKESIDE MALL","KL/Others",5690,98],["GURNEY PLAZA 2","Penang",4905,83]],"ISNTREE":[["HOMESDD","Online",8237,129],["SUNWAY PYRAMID PINK","Selangor",7798,119],["THE EXCHANGE TRX","KL",7701,116],["PAVILION KL SHOPPING","KL",6318,94],["ONE UTAMA SHPG CTR","Selangor",5942,90],["SUNWAY PYRAMID","Selangor",5771,89],["MID VALLEY MEGAMALL","KL",5685,86],["CONCOURSE M299-MVM","KL/Others",4642,70],["MID VALLEY SOUTHKEY","KL",4517,69],["SURIA KLCC","KL",4095,63],["IMPERIAL CITY MALL","KL/Others",3654,55],["SHOPEE","Online",3523,57]],"NBZ":[["PAVILION KL SHOPPING","KL",31558,892],["SURIA KLCC","KL",29482,729],["MID VALLEY MEGAMALL","KL",26523,583],["MID VALLEY SOUTHKEY","KL",25791,617],["SUNWAY PYRAMID PINK","Selangor",24766,632],["ONE UTAMA SHPG CTR","Selangor",22230,521],["SUNWAY PYRAMID","Selangor",21465,407],["IOI CITY MALL","Putrajaya",20230,439],["HOMESDD","Online",17906,339],["GURNEY PLAZA","Penang",15775,371],["IMPERIAL CITY MALL","KL/Others",15748,341],["IMAGO T.SQUARE KK(R)","KL/Others",14651,302]],"TIRTIR":[["PAVILION KL SHOPPING","KL",39874,420],["SUNWAY PYRAMID PINK","Selangor",29013,337],["NU SENTRAL PINK","KL",26264,320],["THE EXCHANGE TRX","KL",25747,280],["MID VALLEY SOUTHKEY","KL",23394,250],["SKY AVENUE PINK","Pahang",19675,229],["CENTRAL I-CITY PINK","Selangor",15901,188],["KSL 2","Johor",15048,162],["IMAGO T.SQUARE KK(R)","KL/Others",13087,144],["GURNEY PLAZA","Penang",12446,139],["MID VALLEY 2","KL",11605,125],["IOI CITY MALL","Putrajaya",11295,121]]},"weekly":{"ABIB":{"Jan":[["202601",43264,3235],["202602",36553,2412],["202603",31298,2142],["202604",39639,2856]],"Feb":[["202605",45803,4210],["202606",50633,3676],["202607",50401,3291],["202608",41345,2792]],"Mar":[["202609",37026,2542],["202610",51240,5129],["202611",46159,3165],["202612",54407,3858],["202613",52006,3589]],"Apr":[["202614",46259,2996],["202615",36333,2361],["202616",41989,2485],["202617",60920,4839]],"May":[["202618",49103,2853],["202619",44332,2344],["202620",39252,2841],["202621",38462,2461]],"Jun":[["202622",50155,2934]]},"ANUA":{"Jan":[["202601",142228,3070],["202602",123372,2687],["202603",107693,2340],["202604",116099,2483]],"Feb":[["202605",130978,2855],["202606",130945,2733],["202607",140551,2921],["202608",139983,2896]],"Mar":[["202609",121322,2475],["202610",121109,2426],["202611",129685,2787],["202612",147150,3218],["202613",155329,3218]],"Apr":[["202614",130130,2695],["202615",119284,2439],["202616",110725,2309],["202617",111011,2359]],"May":[["202618",131993,2853],["202619",113902,2409],["202620",107831,2335],["202621",106061,2232]],"Jun":[["202622",130616,2685]]},"ATP":{"Jan":[["202601",1939,32],["202602",2068,29],["202603",2042,29],["202604",4121,71]],"Feb":[["202605",3979,76],["202606",4140,79],["202607",4284,81],["202608",2606,50]],"Mar":[["202609",2584,51],["202610",2869,55],["202611",3335,60],["202612",2332,44],["202613",3314,63]],"Apr":[["202614",1382,24],["202615",1055,17],["202616",1024,17],["202617",1037,13]],"May":[["202618",58,0],["202619",160,2],["202620",185,2],["202621",587,6]],"Jun":[["202622",306,5]]},"BELIF":{"Jan":[["202601",0,0],["202602",0,0],["202603",0,0],["202604",0,0]],"Feb":[["202605",0,0],["202606",0,0],["202607",0,0],["202608",0,0]],"Mar":[["202609",211,15],["202610",165,11],["202611",56,4],["202612",0,0],["202613",0,0]],"Apr":[["202614",0,0],["202615",0,0],["202616",0,0],["202617",0,0]],"May":[["202618",0,0],["202619",0,0],["202620",0,0],["202621",0,0]],"Jun":[["202622",0,0]]},"BIODANCE":{"Jan":[["202601",109700,5140],["202602",72028,3224],["202603",70006,3062],["202604",86208,4092]],"Feb":[["202605",96332,5058],["202606",87030,4276],["202607",86538,3803],["202608",76958,3368]],"Mar":[["202609",61333,2717],["202610",100673,5307],["202611",101860,5176],["202612",109533,4912],["202613",87654,3843]],"Apr":[["202614",94556,4167],["202615",116797,6045],["202616",83424,3868],["202617",113224,5761]],"May":[["202618",108612,5633],["202619",105810,5447],["202620",104838,5443],["202621",117538,6150]],"Jun":[["202622",149321,7712]]},"BOJ":{"Jan":[["202601",360368,6628],["202602",303427,5562],["202603",284519,5126],["202604",323816,5984]],"Feb":[["202605",385532,7420],["202606",389928,7485],["202607",366257,6939],["202608",349047,6570]],"Mar":[["202609",300997,5718],["202610",289585,5131],["202611",359148,6807],["202612",383968,6687],["202613",378335,6793]],"Apr":[["202614",327963,5761],["202615",307835,5261],["202616",285770,4917],["202617",305362,5700]],"May":[["202618",344681,6218],["202619",325117,5729],["202620",288102,4864],["202621",333612,5791]],"Jun":[["202622",471617,8313]]},"CNP":{"Jan":[["202601",0,0],["202602",0,0],["202603",0,0],["202604",0,0]],"Feb":[["202605",0,0],["202606",0,0],["202607",0,0],["202608",0,0]],"Mar":[["202609",0,0],["202610",0,0],["202611",0,0],["202612",0,0],["202613",0,0]],"Apr":[["202614",0,0],["202615",0,0],["202616",0,0],["202617",0,0]],"May":[["202618",0,0],["202619",0,0],["202620",0,0],["202621",0,0]],"Jun":[["202622",0,0]]},"FWEE":{"Jan":[["202601",7431,108],["202602",4513,67],["202603",5552,80],["202604",5869,88]],"Feb":[["202605",8060,129],["202606",6718,107],["202607",10173,190],["202608",13757,278]],"Mar":[["202609",7504,145],["202610",6199,104],["202611",9062,169],["202612",10901,206],["202613",8707,151]],"Apr":[["202614",5563,88],["202615",5359,85],["202616",3683,56],["202617",7522,121]],"May":[["202618",4523,67],["202619",4392,69],["202620",5934,108],["202621",4615,82]],"Jun":[["202622",7414,129]]},"ISNTREE":{"Jan":[["202601",9504,139],["202602",6739,97],["202603",6186,86],["202604",6271,94]],"Feb":[["202605",8886,147],["202606",7379,122],["202607",7492,118],["202608",7671,115]],"Mar":[["202609",4769,71],["202610",6928,105],["202611",7896,135],["202612",8659,139],["202613",8378,125]],"Apr":[["202614",5917,86],["202615",6027,92],["202616",4510,67],["202617",8524,132]],"May":[["202618",3915,60],["202619",5966,90],["202620",4454,67],["202621",6095,91]],"Jun":[["202622",7379,105]]},"NBZ":{"Jan":[["202601",67179,1232],["202602",50842,956],["202603",46370,915],["202604",47262,1005]],"Feb":[["202605",52071,1420],["202606",53021,1180],["202607",55883,1193],["202608",51879,1058]],"Mar":[["202609",44506,819],["202610",44755,779],["202611",55599,1212],["202612",49769,942],["202613",46836,828]],"Apr":[["202614",48383,926],["202615",40988,818],["202616",40898,778],["202617",47557,1100]],"May":[["202618",46249,905],["202619",35337,635],["202620",35643,691],["202621",36816,763]],"Jun":[["202622",47787,990]]},"TIRTIR":{"Jan":[["202601",19683,207],["202602",14272,158],["202603",14593,159],["202604",15390,168]],"Feb":[["202605",13655,144],["202606",17164,205],["202607",20115,228],["202608",17865,196]],"Mar":[["202609",12083,132],["202610",17040,210],["202611",15615,178],["202612",23440,291],["202613",14216,164]],"Apr":[["202614",12712,137],["202615",12819,139],["202616",15620,164],["202617",14145,150]],"May":[["202618",16571,186],["202619",12556,136],["202620",15627,176],["202621",12379,140]],"Jun":[["202622",16794,178]]}},"months":["Jan","Feb","Mar","Apr","May","Jun"],"updated":"Jun 3, 2026 (up to W22)"};
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun'];
+const BRANDS = ['ABIB','ANUA','BIODANCE','BOJ','FWEE','ISNTREE','NBZ','TIRTIR'];
+const BCOLORS = {BOJ:'#2563eb',ANUA:'#16a34a',BIODANCE:'#ea580c',ABIB:'#7c3aed',NBZ:'#0891b2',TIRTIR:'#db2777',FWEE:'#0d9488',ISNTREE:'#78716c',ATP:'#fb923c',BELIF:'#e879f9',CNP:'#64748b'};
+const SCOLORS = ['#3b82f6','#22c55e','#f97316','#a78bfa','#f59e0b','#f472b6','#2dd4bf','#94a3b8','#fb923c','#e879f9','#64748b','#60a5fa','#4ade80','#fbbf24'];
+const fmt = v => 'RM '+Intl.NumberFormat('en-MY',{notation:'compact',maximumFractionDigits:1}).format(v);
+const fmtFull = v => 'RM '+v.toLocaleString('en-MY',{maximumFractionDigits:0});
+const pct = (a,b) => b>0 ? ((a-b)/b*100).toFixed(1) : null;
+const charts = {};
+function mkChart(id, cfg) { if(charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), cfg); return charts[id]; }
+
+// ── PAGE NAVIGATION ──────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  const renders = {overview:renderOverview, trend:renderTrend, brand:renderBrand, sku:renderSKU, region:renderRegion, stores:renderStores};
+  if(renders[id]) renders[id]();
+}
+
+// ── OVERVIEW ────────────────────────────────────────────────────
+function renderOverview() {
+  // Monthly line
+  const tyM = MONTHS.map(m => BRANDS.reduce((s,b)=>s+(DATA.bm[b][m]?DATA.bm[b][m][0]:0),0));
+  const lyM = MONTHS.map(m => BRANDS.reduce((s,b)=>s+(DATA.bm[b][m]?DATA.bm[b][m][1]:0),0));
+  mkChart('ov-monthly',{type:'line',data:{labels:MONTHS,datasets:[
+    {label:'TY',data:tyM,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.08)',tension:0.3,fill:true,pointBackgroundColor:'#3b82f6',pointRadius:5,borderWidth:2},
+    {label:'LY',data:lyM,borderColor:'#4e5e78',borderDash:[5,4],tension:0.3,pointRadius:4,borderWidth:1.5,pointBackgroundColor:'#4e5e78'},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:12}},grid:{color:'rgba(0,0,0,0.05)'}},y:{ticks:{callback:v=>fmt(v),color:'#64748b',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'},min:1800000}}}});
+
+  // Growth bar
+  const bList = BRANDS.filter(b=>b!=='CNP'&&b!=='BELIF');
+  const growths = bList.map(b=>{
+    const ty=MONTHS.reduce((s,m)=>s+(DATA.bm[b][m]?DATA.bm[b][m][0]:0),0);
+    const ly=MONTHS.reduce((s,m)=>s+(DATA.bm[b][m]?DATA.bm[b][m][1]:0),0);
+    return ly>0?+((ty-ly)/ly*100).toFixed(1):null;
+  }).filter(v=>v!==null);
+  const bListF = bList.filter(b=>{
+    const ty=MONTHS.reduce((s,m)=>s+(DATA.bm[b][m]?DATA.bm[b][m][0]:0),0);
+    const ly=MONTHS.reduce((s,m)=>s+(DATA.bm[b][m]?DATA.bm[b][m][1]:0),0);
+    return ly>0;
+  });
+  mkChart('ov-growth',{type:'bar',data:{labels:bListF,datasets:[{data:growths,backgroundColor:growths.map(g=>g>=0?'rgba(34,197,94,0.8)':'rgba(239,68,68,0.8)'),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},scales:{x:{ticks:{color:'#64748b',font:{size:11}},grid:{display:false}},y:{ticks:{callback:v=>v+'%',color:'#64748b',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}}}}});
+
+  // Share donut
+  const shareBrands = BRANDS.filter(b=>b!=='CNP'&&b!=='BELIF');
+  const shareVals = shareBrands.map(b=>Math.round(MONTHS.reduce((s,m)=>s+(DATA.bm[b][m]?DATA.bm[b][m][0]:0),0)));
+  const legEl = document.getElementById('ov-share-leg');
+  legEl.innerHTML = shareBrands.map((b,i)=>`<span class="leg-item"><span class="leg-dot" style="background:${BCOLORS[b]}"></span>${b}</span>`).join('');
+  mkChart('ov-share',{type:'doughnut',data:{labels:shareBrands,datasets:[{data:shareVals,backgroundColor:shareBrands.map(b=>BCOLORS[b]),borderWidth:2,borderColor:'#ffffff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.raw)}}},cutout:'60%'}});
+
+  // Category bar (static data)
+  const cats = ['Sun Care','Masks','Toner','Treatment','MU Remover','Moisturiser','Eye Care','Cleanser'];
+  const catVals = [3603791,2918047,2059412,1742279,1074940,732893,724511,593458];
+  mkChart('ov-cat',{type:'bar',data:{labels:cats,datasets:[{data:catVals,backgroundColor:SCOLORS.slice(0,8),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},scales:{x:{ticks:{callback:v=>fmt(v),color:'#64748b',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}},y:{ticks:{color:'#64748b',font:{size:11}},grid:{display:false}}}}});
+}
+
+// ── TREND ────────────────────────────────────────────────────────
+const trendActive = new Set(['BOJ']);
+let trendChart = null;
+
+function renderTrend() {
+  const pillsEl = document.getElementById('trend-pills');
+  if(!pillsEl.children.length) {
+    BRANDS.forEach(b=>{
+      const p = document.createElement('button');
+      p.className='pill'; p.textContent=b;
+      const c = BCOLORS[b];
+      p.style.borderColor=c;
+      // default: BOJ selected
+      if(b==='BOJ'){p.style.background=c+'33';p.style.color=c;trendActive.clear();trendActive.add(b);}
+      else{p.style.background='transparent';p.style.color='#64748b';}
+      p.onclick=()=>{
+        // single select — click selects only this brand
+        trendActive.clear();
+        trendActive.add(b);
+        // reset all pills
+        pillsEl.querySelectorAll('.pill').forEach(btn=>{
+          const bc=BCOLORS[btn.textContent];
+          btn.style.background='transparent';
+          btn.style.color='#64748b';
+        });
+        p.style.background=c+'33';
+        p.style.color=c;
+        drawTrendChart();
+      };
+      pillsEl.appendChild(p);
+    });
+  }
+  drawTrendChart();
+  renderWeekly();
+  renderCmp();
+}
+
+function drawTrendChart() {
+  const datasets = [...trendActive].map(b=>({
+    label:b, data:MONTHS.map(m=>DATA.bm[b][m]?DATA.bm[b][m][0]:0),
+    borderColor:BCOLORS[b], pointBackgroundColor:BCOLORS[b], tension:0.3, pointRadius:4, borderWidth:2, fill:false,
+  }));
+  if(trendChart) trendChart.destroy();
+  trendChart = new Chart(document.getElementById('trend-chart'),{type:'line',data:{labels:MONTHS,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:12}},grid:{color:'rgba(0,0,0,0.05)'}},y:{ticks:{callback:v=>fmt(v),color:'#64748b',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}}}}});
+}
+
+function renderWeekly() {
+  const b = document.getElementById('trend-wk-brand').value;
+  document.getElementById('trend-wk-title').textContent=b;
+  const rows = MONTHS.flatMap(m=>(DATA.weekly[b]&&DATA.weekly[b][m])||[]);
+  const labels = rows.map(r=>'W'+r[0].slice(4));
+  const vals = rows.map(r=>r[1]);
+  const bgs = rows.map((_,i)=>{
+    const m=MONTHS[Math.floor(i/5)||0]; return BCOLORS[b]+'cc';
+  });
+  mkChart('trend-weekly',{type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:BCOLORS[b]+'99',borderRadius:3,borderColor:BCOLORS[b],borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:10}},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),color:'#64748b',font:{size:9}},grid:{color:'rgba(0,0,0,0.05)'}}}}});
+}
+
+function renderCmp() {
+  const b = document.getElementById('trend-cmp-brand').value;
+  const ty = MONTHS.map(m=>DATA.bm[b][m]?DATA.bm[b][m][0]:0);
+  const ly = MONTHS.map(m=>DATA.bm[b][m]?DATA.bm[b][m][1]:0);
+  mkChart('trend-cmp',{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'TY',data:ty,backgroundColor:BCOLORS[b]+'cc',borderRadius:4},
+    {label:'LY',data:ly,backgroundColor:'#e2e8f0',borderRadius:4},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:12}},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),color:'#64748b',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}}}}});
+}
+
+// ── BRAND DEEP DIVE ──────────────────────────────────────────────
+function renderBrand() {
+  const b = document.getElementById('brand-sel').value;
+  const mSel = document.getElementById('brand-month').value;
+  const mList = mSel==='all'?MONTHS:[mSel];
+
+  const ty = mList.reduce((s,m)=>s+(DATA.bm[b][m]?DATA.bm[b][m][0]:0),0);
+  const ly = mList.reduce((s,m)=>s+(DATA.bm[b][m]?DATA.bm[b][m][1]:0),0);
+  const qty = mList.reduce((s,m)=>s+(DATA.bm[b][m]?DATA.bm[b][m][2]:0),0);
+  const g = pct(ty,ly);
+
+  document.getElementById('brand-kpis').innerHTML = `
+    <div class="kpi blue"><div class="kpi-label">Sales TY</div><div class="kpi-val">${fmt(ty)}</div><div class="kpi-sub ${g>=0?'up':'down'}">${g!=null?(g>=0?'▲ +':'▼ ')+g+'% vs LY':'—'}</div></div>
+    <div class="kpi green"><div class="kpi-label">Sales LY</div><div class="kpi-val">${fmt(ly)}</div><div class="kpi-sub neu">Same period LY</div></div>
+    <div class="kpi amber"><div class="kpi-label">Qty Sold TY</div><div class="kpi-val">${qty.toLocaleString()}</div><div class="kpi-sub neu">units</div></div>
+    <div class="kpi purple"><div class="kpi-label">Avg/Month</div><div class="kpi-val">${fmt(ty/mList.length)}</div><div class="kpi-sub neu">per month TY</div></div>`;
+
+  // Monthly chart
+  mkChart('brand-monthly',{type:'bar',data:{labels:MONTHS,datasets:[
+    {label:'TY',data:MONTHS.map(m=>DATA.bm[b][m]?DATA.bm[b][m][0]:0),backgroundColor:BCOLORS[b]+'cc',borderRadius:4},
+    {label:'LY',data:MONTHS.map(m=>DATA.bm[b][m]?DATA.bm[b][m][1]:0),backgroundColor:'#e2e8f0',borderRadius:4},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:12}},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),color:'#64748b',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}}}}});
+
+  // Regional donut
+  const stateData = DATA.bs[b]||{};
+  const stEntries = Object.entries(stateData).sort((a,b)=>b[1][0]-a[1][0]).slice(0,8);
+  mkChart('brand-region-chart',{type:'doughnut',data:{labels:stEntries.map(e=>e[0]),datasets:[{data:stEntries.map(e=>e[1][0]),backgroundColor:SCOLORS,borderWidth:2,borderColor:'#ffffff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right',labels:{color:'#64748b',font:{size:10},boxWidth:10,padding:6}},tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.raw)}}},cutout:'55%'}});
+
+  // Weekly
+  const wRows = MONTHS.flatMap(m=>(DATA.weekly[b]&&DATA.weekly[b][m])||[]);
+  mkChart('brand-weekly',{type:'line',data:{labels:wRows.map(r=>'W'+r[0].slice(4)),datasets:[{data:wRows.map(r=>r[1]),borderColor:BCOLORS[b],pointBackgroundColor:BCOLORS[b],tension:0.3,pointRadius:3,borderWidth:2,fill:false,backgroundColor:BCOLORS[b]+'15'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:9}},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),color:'#64748b',font:{size:9}},grid:{color:'rgba(0,0,0,0.05)'}}}}});
+
+  // SKUs
+  const skuEl = document.getElementById('brand-skus');
+  const skus = DATA.bsku[b]||[];
+  skuEl.innerHTML = skus.map((s,i)=>{
+    const g2 = pct(s[1],s[2]);
+    const badge = s[2]===0?'<span class="badge badge-new">NEW</span>':g2>=0?`<span class="badge badge-up">▲ ${g2}%</span>`:`<span class="badge badge-dn">▼ ${Math.abs(g2)}%</span>`;
+    return `<div class="sku-row"><div class="sku-rank">${i+1}</div><div class="sku-name">${s[0]}</div><div class="sku-right"><div class="sku-val">${fmtFull(s[1])}</div><div>${badge}</div></div></div>`;
+  }).join('');
+}
+
+// ── SKU ──────────────────────────────────────────────────────────
+function renderSKU() {
+  const bSel = document.getElementById('sku-brand').value;
+  const sortBy = document.getElementById('sku-sort').value;
+  let items = [];
+  const bList = bSel==='all'?BRANDS:[bSel];
+  bList.forEach(b=>(DATA.bsku[b]||[]).forEach(s=>items.push([b,...s])));
+  if(sortBy==='ty') items.sort((a,b)=>b[2]-a[2]);
+  else if(sortBy==='qty') items.sort((a,b)=>b[4]-a[4]);
+  else items.sort((a,b)=>{const ga=pct(b[2],b[3]),gb=pct(a[2],a[3]);return (gb||0)-(ga||0);});
+  items = items.slice(0,12);
+
+  mkChart('sku-bar',{type:'bar',data:{labels:items.map(s=>s[1].length>20?s[1].slice(0,20)+'…':s[1]),datasets:[
+    {label:'TY',data:items.map(s=>s[2]),backgroundColor:items.map(s=>BCOLORS[s[0]]+'cc'),borderRadius:3},
+    {label:'LY',data:items.map(s=>s[3]),backgroundColor:'#e2e8f0',borderRadius:3},
+  ]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},scales:{x:{ticks:{callback:v=>fmt(v),color:'#64748b',font:{size:9}},grid:{color:'rgba(0,0,0,0.05)'}},y:{ticks:{color:'#64748b',font:{size:10}},grid:{display:false}}}}});
+
+  const tbody = document.getElementById('sku-table');
+  tbody.innerHTML = items.map((s,i)=>{
+    const g=pct(s[2],s[3]);
+    const badge=s[3]===0?'<span class="badge badge-new">NEW</span>':g>=0?`<span class="badge badge-up">+${g}%</span>`:`<span class="badge badge-dn">${g}%</span>`;
+    return `<tr><td>${i+1}</td><td>${s[1]}</td><td><span style="color:${BCOLORS[s[0]]};font-weight:600">${s[0]}</span></td><td>${fmtFull(s[2])}</td><td>${fmtFull(s[3])}</td><td>${badge}</td><td>${s[4].toLocaleString()}</td></tr>`;
+  }).join('');
+}
+
+// ── REGIONAL ─────────────────────────────────────────────────────
+function renderRegion() {
+  const bSel = document.getElementById('reg-brand').value;
+  const metric = document.getElementById('reg-metric').value;
+  const bList = bSel==='all'?BRANDS:[bSel];
+  const stateMap = {};
+  bList.forEach(b=>{
+    const sd=DATA.bs[b]||{};
+    Object.entries(sd).forEach(([st,v])=>{
+      if(!stateMap[st]) stateMap[st]={ty:0,ly:0,qty:0,stores:0};
+      stateMap[st].ty+=v[0]; stateMap[st].ly+=v[1]; stateMap[st].qty+=v[2]; stateMap[st].stores+=v[3];
+    });
+  });
+  const entries = Object.entries(stateMap).sort((a,b)=>b[1].ty-a[1].ty);
+  const maxVal = entries[0]?entries[0][1].ty:1;
+
+  const barsEl = document.getElementById('reg-bars');
+  barsEl.innerHTML = entries.map(([st,v],i)=>{
+    const g=pct(v.ty,v.ly);
+    const badge=g!=null?(g>=0?`<span class="badge badge-up">+${g}%</span>`:`<span class="badge badge-dn">${g}%</span>`):'';
+    return `<div class="state-row">
+      <div class="state-name">${st}</div>
+      <div class="state-bar-bg"><div class="state-bar-fill" style="width:${Math.round(v.ty/maxVal*100)}%;background:${SCOLORS[i%SCOLORS.length]}"></div></div>
+      <div class="state-val">${fmt(v.ty)}</div>
+      <div class="state-stores">${v.stores}🏪</div>
+    </div>`;
+  }).join('');
+
+  mkChart('reg-pie',{type:'doughnut',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1].ty),backgroundColor:SCOLORS,borderWidth:2,borderColor:'#ffffff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right',labels:{color:'#64748b',font:{size:10},boxWidth:10,padding:5}},tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.raw)}}},cutout:'50%'}});
+
+  const tbody=document.getElementById('reg-tbody');
+  tbody.innerHTML=entries.map(([st,v])=>{
+    const g=pct(v.ty,v.ly);
+    const badge=g!=null?(g>=0?`<span class="badge badge-up">+${g}%</span>`:`<span class="badge badge-dn">${g}%</span>`):'—';
+    return `<tr><td><b>${st}</b></td><td>${fmtFull(v.ty)}</td><td>${fmtFull(v.ly)}</td><td>${badge}</td><td>${v.stores}</td><td>${v.qty.toLocaleString()}</td></tr>`;
+  }).join('');
+}
+
+// ── STORES ────────────────────────────────────────────────────────
+function renderStores() {
+  const b = document.getElementById('store-brand').value;
+  const stFilter = document.getElementById('store-state').value;
+  let stores = (DATA.bstore[b]||[]).filter(s=>stFilter==='all'||s[1]===stFilter);
+  const maxV = stores[0]?stores[0][2]:1;
+
+  mkChart('store-chart',{type:'bar',data:{labels:stores.map(s=>s[0].length>18?s[0].slice(0,18)+'…':s[0]),datasets:[{data:stores.map(s=>s[2]),backgroundColor:BCOLORS[b]+'99',borderRadius:4,borderColor:BCOLORS[b],borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)+' · '+stores[c.dataIndex][3].toLocaleString()+' units'}}},scales:{x:{ticks:{callback:v=>fmt(v),color:'#64748b',font:{size:9}},grid:{color:'rgba(0,0,0,0.05)'}},y:{ticks:{color:'#64748b',font:{size:10}},grid:{display:false}}}}});
+
+  const tbody=document.getElementById('store-table');
+  tbody.innerHTML=stores.map((s,i)=>`<tr><td>${i+1}</td><td>${s[0]}</td><td><span style="font-size:11px;color:var(--text3)">${s[1]}</span></td><td>${fmtFull(s[2])}</td><td>${s[3].toLocaleString()}</td></tr>`).join('');
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+renderOverview();
+</script>
+</body>
+</html>
